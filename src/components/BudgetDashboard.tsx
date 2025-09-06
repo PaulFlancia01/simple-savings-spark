@@ -15,43 +15,53 @@ import {
   Calendar,
   CreditCard
 } from "lucide-react";
-
-// Mock data for demonstration
-const budgetData = [
-  { category: "Housing", budgeted: 1200, spent: 1150, color: "hsl(213, 94%, 68%)" },
-  { category: "Food", budgeted: 400, spent: 420, color: "hsl(158, 64%, 52%)" },
-  { category: "Transportation", budgeted: 300, spent: 280, color: "hsl(38, 92%, 58%)" },
-  { category: "Entertainment", budgeted: 200, spent: 250, color: "hsl(0, 84%, 60%)" },
-  { category: "Utilities", budgeted: 150, spent: 145, color: "hsl(213, 94%, 58%)" },
-];
-
-const spendingTrend = [
-  { month: "Jan", spending: 2100, budget: 2250 },
-  { month: "Feb", spending: 2200, budget: 2250 },
-  { month: "Mar", spending: 2245, budget: 2250 },
-  { month: "Apr", spending: 2300, budget: 2250 },
-  { month: "May", spending: 2180, budget: 2250 },
-  { month: "Jun", spending: 2245, budget: 2250 },
-];
-
-const pieChartData = budgetData.map(item => ({
-  name: item.category,
-  value: item.spent,
-  color: item.color
-}));
+import { BudgetData } from "@/types/budget";
 
 interface BudgetDashboardProps {
   onCreateBudget: () => void;
   onAddExpense: () => void;
+  budgetData: BudgetData;
+  hasAnyData: boolean;
 }
 
-export function BudgetDashboard({ onCreateBudget, onAddExpense }: BudgetDashboardProps) {
-  const totalBudget = budgetData.reduce((sum, item) => sum + item.budgeted, 0);
-  const totalSpent = budgetData.reduce((sum, item) => sum + item.spent, 0);
-  const remaining = totalBudget - totalSpent;
-  const spentPercentage = (totalSpent / totalBudget) * 100;
+export function BudgetDashboard({ onCreateBudget, onAddExpense, budgetData, hasAnyData }: BudgetDashboardProps) {
+  if (!hasAnyData) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-6">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold text-foreground">Welcome to Your Budget Tracker</h1>
+          <p className="text-muted-foreground max-w-md">
+            Get started by creating your first budget. Set up your income, categories, and savings goals to begin tracking your finances.
+          </p>
+        </div>
+        <Button variant="hero" onClick={onCreateBudget} size="lg">
+          <Target className="w-5 h-5" />
+          Create Your First Budget
+        </Button>
+      </div>
+    );
+  }
 
-  const overBudgetCategories = budgetData.filter(item => item.spent > item.budgeted);
+  const { categories } = budgetData;
+  const totalBudget = categories.reduce((sum, item) => sum + item.budgeted, 0);
+  const totalSpent = categories.reduce((sum, item) => sum + item.spent, 0);
+  const remaining = totalBudget - totalSpent;
+  const spentPercentage = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
+
+  const overBudgetCategories = categories.filter(item => item.spent > item.budgeted);
+
+  const pieChartData = categories
+    .filter(item => item.spent > 0)
+    .map(item => ({
+      name: item.category,
+      value: item.spent,
+      color: item.color
+    }));
+
+  // Generate spending trend based on current data (simplified)
+  const spendingTrend = [
+    { month: "This Month", spending: totalSpent, budget: totalBudget },
+  ];
 
   return (
     <div className="space-y-6">
@@ -160,7 +170,7 @@ export function BudgetDashboard({ onCreateBudget, onAddExpense }: BudgetDashboar
               className="h-[300px]"
             >
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={budgetData}>
+                <BarChart data={categories}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(214, 32%, 91%)" />
                   <XAxis 
                     dataKey="category" 
@@ -269,16 +279,16 @@ export function BudgetDashboard({ onCreateBudget, onAddExpense }: BudgetDashboar
           <CardTitle>Category Progress</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {budgetData.map((category) => {
-            const percentage = (category.spent / category.budgeted) * 100;
+          {categories.map((category) => {
+            const percentage = category.budgeted > 0 ? (category.spent / category.budgeted) * 100 : 0;
             const isOverBudget = percentage > 100;
             
             return (
-              <div key={category.category} className="space-y-2">
+              <div key={category.id} className="space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="font-medium">{category.category}</span>
                   <span className={`text-sm ${isOverBudget ? 'text-danger' : 'text-success'}`}>
-                    ${category.spent} / ${category.budgeted}
+                    ${category.spent.toLocaleString()} / ${category.budgeted.toLocaleString()}
                   </span>
                 </div>
                 <Progress 
